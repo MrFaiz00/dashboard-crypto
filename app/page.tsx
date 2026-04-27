@@ -5,7 +5,7 @@ import { useState, useEffect, useRef } from "react";
 export default function Dashboard() {
   const [prices, setPrices] = useState<any>({});
   const [coinList, setCoinList] = useState<any[]>([]);
-  const [alertText, setAlertText] = useState("SYSTEM_ONLINE");
+  const [alertText, setAlertText] = useState("SYSTEM ONLINE");
   const activityScore = useRef<any>({});
   const prevPrices = useRef<any>({});
 
@@ -38,7 +38,7 @@ export default function Dashboard() {
             const diff = current !== old ? ((current - old) / old) * 100 : 0;
             if (Math.abs(diff) > 0.001) {
               activityScore.current[item.symbol] = (activityScore.current[item.symbol] || 0) + Math.abs(diff) * 150;
-              if (Math.abs(diff) > 0.02) setAlertText("VOL_SPIKE: " + item.symbol);
+              if (Math.abs(diff) > 0.02) setAlertText("ALERT " + item.symbol);
             } else {
               activityScore.current[item.symbol] = (activityScore.current[item.symbol] || 0) * 0.8;
             }
@@ -67,17 +67,17 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-black text-white font-mono uppercase text-[10px]">
-      {/* BANNER ATAS - SUDAH BERSIH DARI SIMBOL >> DAN << */}
+      {/* BANNER BERSIH TANPA SIMBOL ANEH */}
       <div className="bg-[#00ff00] text-black p-2 font-black flex justify-between sticky top-0 z-50">
-        <span>STATUS_ACTIVE</span>
+        <span>STATUS ACTIVE</span>
         <span className="animate-pulse">{alertText}</span>
-        <span>MARKET_FEED</span>
+        <span>MARKET FEED</span>
       </div>
 
       <div className="p-4 space-y-4">
         <div className="flex justify-between items-end border-b border-[#00ff00]/20 pb-4">
-          <h1 className="text-[#00ff00] text-4xl font-black italic tracking-tighter leading-none">SENTINEL-X</h1>
-          <div className="text-[8px] text-zinc-500 font-bold tracking-widest">SIGNAL_V12</div>
+          <h1 className="text-[#00ff00] text-4xl font-black italic tracking-tighter leading-none">SENTINEL X</h1>
+          <div className="text-[8px] text-zinc-500 font-bold tracking-widest">VERSION 12</div>
         </div>
         
         <div className="flex flex-col gap-3">
@@ -92,7 +92,7 @@ export default function Dashboard() {
                     <span className="text-3xl font-black">{coin.symbol.replace("USDT","")}</span>
                   </div>
                   <div className="text-[10px] font-bold px-2 py-1 border border-[#00ff00]/30 rounded text-[#00ff00]">
-                    SCORE: {d.score?.toFixed(1)}
+                    SCORE {d.score?.toFixed(1)}
                   </div>
                 </div>
                 <div className="grid grid-cols-3 gap-2 border-t border-zinc-800 pt-4 text-center">
@@ -103,7 +103,7 @@ export default function Dashboard() {
                     </p>
                   </div>
                   <div>
-                    <p className="text-zinc-600 text-[8px] font-bold">24H %</p>
+                    <p className="text-zinc-600 text-[8px] font-bold">24H</p>
                     <p className="text-lg font-black">{d.change?.toFixed(2)}%</p>
                   </div>
                   <div>
