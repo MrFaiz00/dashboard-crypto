@@ -3,116 +3,107 @@
 import { useState, useEffect } from "react";
 
 export default function Dashboard() {
-  const [prices, setPrices] = useState<{ [key: string]: any }>({});
-  const [coinList, setCoinList] = useState<any[]>([]);
+  const [coinData, setCoinData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const fetchTopCoins = async () => {
+  // AMBIL DATA DARI COINGECKO (GRATIS & LENGKAP)
+  const fetchMarketData = async () => {
     try {
-      const res = await fetch("https://api.binance.com/api/v3/ticker/24hr");
+      const res = await fetch(
+        "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=20&page=1&sparkline=false&price_change_percentage=24h"
+      );
       const data = await res.json();
-      const top20 = data
-        .filter((item: any) => item.symbol.endsWith("USDT"))
-        .sort((a: any, b: any) => parseFloat(b.volume) - parseFloat(a.volume))
-        .slice(0, 20);
-      setCoinList(top20);
-    } catch (err) { console.error(err); }
+      setCoinData(data);
+      setLoading(false);
+    } catch (err) {
+      console.error("API Error:", err);
+    }
   };
 
-  const updateData = async () => {
-    try {
-      const res = await fetch("https://api.binance.com/api/v3/ticker/24hr");
-      const data = await res.json();
-      const updated: any = {};
-      data.forEach((item: any) => {
-        if (coinList.find(c => c.symbol === item.symbol)) {
-          updated[item.symbol] = {
-            price: parseFloat(item.lastPrice),
-            change: parseFloat(item.priceChangePercent),
-            high: parseFloat(item.highPrice),
-            vol: (parseFloat(item.volume) / 1000000).toFixed(1)
-          };
-        }
-      });
-      setPrices(updated);
-    } catch (err) { console.error(err); }
-  };
-
-  useEffect(() => { fetchTopCoins(); }, []);
   useEffect(() => {
-    const interval = setInterval(updateData, 3000);
+    fetchMarketData();
+    const interval = setInterval(fetchMarketData, 60000); // CoinGecko free tier update tiap 60 detik
     return () => clearInterval(interval);
-  }, [coinList]);
+  }, []);
 
   const getSignal = (change: number) => {
-    if (change > 3) return { label: "ACCUMULATE / BUY", color: "text-[#00ff00]", icon: "🟢", priority: 1 };
+    if (change > 5) return { label: "ACCUMULATE / BUY", color: "text-[#00ff00]", icon: "🟢", priority: 1 };
     if (change > 1) return { label: "SPEKULASI BUY", color: "text-[#00ff00]", icon: "⚡", priority: 2 };
-    if (change < -3) return { label: "DISTRIBUTE / SELL", color: "text-red-500", icon: "🔴", priority: 5 };
+    if (change < -5) return { label: "DISTRIBUTE / SELL", color: "text-red-500", icon: "🔴", priority: 5 };
     if (change < -1) return { label: "WAIT & SEE", color: "text-yellow-500", icon: "🩹", priority: 4 };
     return { label: "NEUTRAL", color: "text-gray-400", icon: "⚖️", priority: 3 };
   };
 
-  // LOGIKA SORTING (MENGURUTKAN BERDASARKAN PRIORITAS SINYAL)
-  const sortedCoins = [...coinList].sort((a, b) => {
-    const dataA = prices[a.symbol] || { change: 0 };
-    const dataB = prices[b.symbol] || { change: 0 };
-    return getSignal(dataA.change).priority - getSignal(dataB.change).priority;
+  // SORTING BERDASARKAN PRIORITAS SINYAL
+  const sortedCoins = [...coinData].sort((a, b) => {
+    return getSignal(a.price_change_percentage_24h).priority - getSignal(b.price_change_percentage_24h).priority;
   });
+
+  if (loading) return <div className="min-h-screen bg-black text-[#00ff00] flex items-center justify-center font-mono animate-pulse text-2xl">INITIALIZING CORE ACCESS...</div>;
 
   return (
     <div className="min-h-screen bg-[#050505] text-white p-4 font-mono">
+      {/* HEADER */}
       <div className="mb-6">
-        <h1 className="text-[#00ff00] text-3xl font-black italic tracking-tighter">
-          [ Sentinel v12.0 ]
+        <h1 className="text-[#00ff00] text-3xl font-black italic tracking-tighter uppercase">
+          [ Sentinel v12.0 ] CoinGecko Data Feed
         </h1>
         <p className="text-[10px] text-green-500/50 mt-2 tracking-widest uppercase">
-          Signal Priority Active | {new Date().toLocaleTimeString()}
+          Signal Priority Active | Rank #1 - #20 Market Cap
         </p>
         <div className="h-[1px] w-full bg-green-900/50 mt-4"></div>
       </div>
 
       <div className="space-y-4">
         {sortedCoins.map((coin) => {
-          const data = prices[coin.symbol] || {};
-          const sig = getSignal(data.change || 0);
-          const whaleTarget = (data.price * 1.05) || 0;
+          const sig = getSignal(coin.price_change_percentage_24h);
+          const whaleTarget = coin.current_price * 1.15;
 
           return (
-            <div key={coin.symbol} className={`bg-[#0a0a0a] border-l-4 ${sig.priority <= 2 ? 'border-green-500' : 'border-gray-800'} p-5 rounded-r-xl relative transition-all duration-500`}>
+            <div key={coin.id} className={`bg-[#0a0a0a] border-l-4 ${sig.priority <= 2 ? 'border-green-500 shadow-[0_0_15px_rgba(34,197,94,0.1)]' : 'border-gray-800'} p-5 rounded-r-xl relative transition-all duration-700`}>
               <div className="flex justify-between items-start mb-4">
-                <h2 className="text-3xl font-black tracking-tighter">{coin.symbol.replace("USDT", "")}</h2>
-                <div className={`text-sm font-bold flex items-center gap-2 ${sig.color}`}>
+                <div className="flex items-center gap-3">
+                    <img src={coin.image} alt={coin.name} className="w-8 h-8" />
+                    <div>
+                        <h2 className="text-2xl font-black tracking-tighter uppercase">{coin.symbol}</h2>
+                        <p className="text-[9px] text-gray-500">RANK #{coin.market_cap_rank}</p>
+                    </div>
+                </div>
+                <div className={`text-sm font-bold flex items-center gap-2 ${sig.color} bg-black/40 px-3 py-1 rounded-full border border-white/5`}>
                    <span>{sig.icon}</span> {sig.label}
                 </div>
               </div>
 
               <div className="grid grid-cols-4 gap-4 mb-4 text-gray-500 uppercase">
                 <div>
-                  <p className="text-[8px]">Price</p>
-                  <p className="text-lg font-bold text-white">${data.price?.toLocaleString() || "0.00"}</p>
+                  <p className="text-[8px]">Current Price</p>
+                  <p className="text-xl font-bold text-white">${coin.current_price.toLocaleString()}</p>
                 </div>
                 <div>
-                  <p className="text-[8px]">Change</p>
-                  <p className={`text-lg font-bold ${data.change > 0 ? 'text-green-500' : 'text-red-500'}`}>{data.change}%</p>
+                  <p className="text-[8px]">24h Change</p>
+                  <p className={`text-lg font-bold ${coin.price_change_percentage_24h > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    {coin.price_change_percentage_24h?.toFixed(2)}%
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[8px]">Market Cap</p>
+                  <p className="text-lg font-bold text-white">${(coin.market_cap / 1000000000).toFixed(2)}B</p>
                 </div>
                 <div>
                   <p className="text-[8px]">B-Power</p>
-                  <p className="text-lg font-bold text-white">{(Math.random() * 100).toFixed(1)}%</p>
-                </div>
-                <div>
-                  <p className="text-[8px]">Whale Vol</p>
-                  <p className="text-lg font-bold text-white">{data.vol}M</p>
+                  <p className="text-lg font-bold text-[#00ff00]">{(Math.random() * 30 + 70).toFixed(1)}%</p>
                 </div>
               </div>
 
-              <div className="mt-2 flex justify-between items-end">
+              <div className="mt-2 flex justify-between items-end border-t border-white/5 pt-4">
                 <div>
-                    <p className="text-[8px] text-gray-600">WHALE TARGET</p>
+                    <p className="text-[8px] text-gray-600 tracking-[0.2em]">EXPECTED WHALE TARGET</p>
                     <p className="text-xl font-bold text-[#00ff00] tracking-tighter">
-                    ${whaleTarget < 1 ? whaleTarget.toFixed(6) : whaleTarget.toLocaleString()}
+                    ${whaleTarget.toLocaleString()}
                     </p>
                 </div>
-                <div className="text-[10px] text-gray-800 font-bold uppercase tracking-widest bg-white/5 px-2 py-1">
-                    Priority: {sig.priority}
+                <div className="text-[9px] text-gray-700 italic">
+                    ID: {coin.id}
                 </div>
               </div>
             </div>
